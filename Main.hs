@@ -11,118 +11,71 @@
 
  To use with the Haskell platform:
    $ cabal install
-   $ cal-lookuptable-gen --function
-   $ cal-lookuptable-gen --procedure
-   $ cal-lookuptable-gen --array
+   $ cal-lookuptable-gen
 -}
 
 module Main where
 
-import Control.Monad (when)
+import Control.Monad (when,void)
 import qualified Data.IntMap as IntMap
+import Data.List
 import Data.Maybe
+import Numeric
 import System.Console.CmdArgs
 
 ---------------
 -- user defined input range & user defined lookup function
 
-lower, upper :: Integer
+lower, upper :: Int
 lower = 1
-upper = 20
+upper = 10
 
 -- user defined lookup Integer -> Integer function with user defined range
-lookupFun :: Integer -> Integer
-lookupFun = round .  sqrt . fromInteger
+lookupFun :: Int -> String
+lookupFun = show . round .  sqrt . fromIntegral
+
 
 ---------------
 -- code gen
 
-type Lookup = IntMap.IntMap [Integer]
+type Lookup = IntMap.IntMap String
 
-f :: Lookup -> Integer -> Lookup
+f :: Lookup -> Int -> Lookup
 f mp elemKey =
-    let sqrVal = lookupFun elemKey
-    in IntMap.alter (\a ->
-                         if isNothing a
-                         then Just [elemKey]
-                         else
-                             let xs = fromJust a
-                             in Just $ elemKey : xs) (fromInteger sqrVal) mp
+    let lookupVal = lookupFun elemKey
+    in IntMap.insert elemKey lookupVal mp
 
 g :: Lookup
 g = foldr (flip f) IntMap.empty [lower..upper]
 
-genFunSt :: Integer -> Integer -> Int -> [String]
-genFunSt lowerB upperB val =
-  [" if (x >= " ++ show lowerB ++ " && x <= " ++ show upperB ++ ") then " ++ show val," else"]
-
-genProcSt :: Integer -> Integer -> Int -> [String]
-genProcSt lowerB upperB val =
-  ["  if (x >= " ++ show lowerB ++ " && x <= " ++ show upperB ++ ") then val := " ++ show val ++ ";","  end"]
-
-genIfElse :: Lookup -> (Integer -> Integer -> Int -> [String]) -> [String]
-genIfElse lookupKey codeGenFun =
-    let ls  = IntMap.toList lookupKey
-    in concatMap (\(k,vs) -> codeGenFun (head vs) (last vs) k) ls
-
-genProc :: [String]
-genProc =
-    let start    = [" int val;"," procedure lookupProc()"," begin"]
-        ifThenElses = genIfElse g genProcSt
-        procBody = ifThenElses
-        procEnd  = [" end"]
-    in start ++ procBody ++ procEnd
-
-genFun :: [String]
-genFun =
-    let start    = [" function lookupFun(int x) --> int :"]
-        ifThenElses = genIfElse g genFunSt
-        ifThenElses' = init ifThenElses ++  [" else 0"] -- add value onto last else
-        funBody = ifThenElses' ++ replicate (length ifThenElses') "  end"
-        funEnd  = [" end"]
-    in start ++ funBody ++ funEnd
-
-genArr :: Lookup -> [Integer]
-genArr lookupKey =
-    let ls  = IntMap.toList lookupKey
-        valToKeyList = concatMap (\(k,vs) -> map (\v -> (fromInteger v,toInteger k)) vs) ls
-        valToKeyMap = IntMap.fromList valToKeyList :: IntMap.IntMap Integer
-        arrayLookup = map (\k ->
-                           if IntMap.member k valToKeyMap
-                           then fromJust $ IntMap.lookup k valToKeyMap
-                           else -1) [fromInteger lower .. fromInteger upper]
-    in arrayLookup
+genArr :: Lookup -> [String]
+genArr lookupKey = map (\i -> fromMaybe "" (IntMap.lookup i lookupKey)) [lower .. upper]
 
 genFunArr :: [String]
 genFunArr =
-    let start    = [" int lookupArr[" ++ show (upper-lower + 1) ++ "] := "  ++ show (genArr g) ++ ";",
+    let start    = [" int lookupArr[" ++ show (upper-lower + 1) ++ "] = "  ++ showArr (genArr g) ++ ";",
                     " function lookup(int x) --> int :"]
         procBody = [" lookupArr[x-1]"]
         procEnd  = [" end"]
     in start ++ procBody ++ procEnd
 
+showArr :: [String] -> String
+showArr ss = "[" ++ concat (intersperse "," ss) ++ "]"
+
 main :: IO ()
 main = do
-  opts <- getOpts
-  when (function opts) (mapM_ putStrLn genFun)
-  when (procedure opts) (mapM_ putStrLn genProc)
-  when (array opts) (mapM_ putStrLn genFunArr)
+  void getOpts -- for --help option
+  mapM_ putStrLn genFunArr
 
----------------------
--- command line options
+-- ---------------------
+-- -- command line options
 
 data CalLookupOptions = CalLookupOptions
-    { function :: Bool
-    , procedure :: Bool
-    , array :: Bool
-    } deriving (Data, Typeable, Show, Eq)
+    { } deriving (Data, Typeable, Show, Eq)
 
 calLookupOpts :: CalLookupOptions
 calLookupOpts = CalLookupOptions
-    { function = def &= help "generates a function lookup with if/else statements"
-    , procedure = def &= help "generates a procedure lookup with if/end statements"
-    , array = def &= help "generates a procedure lookup with array indexing"
-    }
+    { }
 
 getOpts :: IO CalLookupOptions
 getOpts = cmdArgs $ calLookupOpts
