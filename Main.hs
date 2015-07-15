@@ -93,12 +93,11 @@ genArr lookupKey =
                            else -1) [fromInteger lower .. fromInteger upper]
     in arrayLookup
 
-genProcArr :: [String]
-genProcArr =
-    let start    = [" int lookupVal;",
-                    " int lookupArr[" ++ show (upper-lower + 1) ++ "] := "  ++ show (genArr g) ++ ";",
-                    " procedure lookupProcArr(int x) begin"]
-        procBody = [" lookupVal := lookupArr[x-1];"]
+genFunArr :: [String]
+genFunArr =
+    let start    = [" int lookupArr[" ++ show (upper-lower + 1) ++ "] := "  ++ show (genArr g) ++ ";",
+                    " function lookup(int x) --> int :"]
+        procBody = [" lookupArr[x-1]"]
         procEnd  = [" end"]
     in start ++ procBody ++ procEnd
 
@@ -107,7 +106,7 @@ main = do
   opts <- getOpts
   when (function opts) (mapM_ putStrLn genFun)
   when (procedure opts) (mapM_ putStrLn genProc)
-  when (array opts) (mapM_ putStrLn genProcArr)
+  when (array opts) (mapM_ putStrLn genFunArr)
 
 ---------------------
 -- command line options
