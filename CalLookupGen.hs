@@ -3,18 +3,19 @@ module CalLookupGen (genFunArr) where
 
 import qualified Data.IntMap as IntMap
 import Data.List
+import Data.List.Split
 import Data.Maybe
 import Numeric
 
 
 type Lookup = IntMap.IntMap String
 
-genFunArr lower upper inputType outputType lookupFun = start ++ procBody ++ procEnd
+genFunArr lower upper inputType outputType lookupFun = start ++ funBody ++ funEnd
     where
       start    = [" " ++ outputType ++ " lookupArr[" ++ show (upper-lower + 1) ++ "] = "  ++ showArr (genArr g) ++ ";",
                   " function lookup(" ++ inputType ++ " x) --> " ++ outputType ++ " :"]
-      procBody = [" lookupArr[x-1]"]
-      procEnd  = [" end"]
+      funBody = [" lookupArr[x-1]"]
+      funEnd  = [" end"]
 
       genArr :: Lookup -> [String]
       genArr lookupKey = map (\i -> fromMaybe "" (IntMap.lookup i lookupKey)) [lower .. upper]
@@ -29,4 +30,9 @@ genFunArr lower upper inputType outputType lookupFun = start ++ procBody ++ proc
 
 
 showArr :: [String] -> String
-showArr ss = "[" ++ concat (intersperse "," ss) ++ "]"
+showArr ss = "[" ++ concat xs ++ concat lastLine ++ "]"
+    where
+      elems = take (length xs - 1) (concat xs)
+      sss = chunksOf 20 ss :: [[String]]
+      xs  = concatMap (\ ss -> intersperse "," ss ++ [",\n"]) (init sss)
+      lastLine = intersperse "," (last sss :: [String])

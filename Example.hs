@@ -7,23 +7,32 @@ module Main where
  the lookup function on an FPGA is too intensive.
 
  To use, define the lower and upper bounds of the lookup and also
- define the lookup functin. Comment out in `main` whether you want
- a procedure or a function CAL implementation of the lookup table.
+ define the @lookup@ function.
 -}
 
 import Control.Monad (void)
 import System.Console.CmdArgs
 import CalLookupGen
 
+import Data.Binary.Put
+import Data.Binary.IEEE754
+import qualified Data.ByteString.Lazy.Char8 as S
+import Data.ByteString.Builder
+import Numeric
+
 lower, upper :: Int
-lower = 1
-upper = 20
+lower = 0
+upper = 65535
 
 lookupFun :: Int -> String
-lookupFun = show . round .  sqrt . fromIntegral
+lookupFun i =
+    let x = runPut $ putFloat32be (fromIntegral i)
+        bs = toLazyByteString (lazyByteStringHex x)
+        myInt = read ("0x" ++ S.unpack bs)
+    in "0x" ++ showHex myInt ""
 
 inputType, outputType :: String
-inputType  = "uint(size=8)"
+inputType  = "uint(size=16)"
 outputType = "uint(size=32)"
 
 main :: IO ()

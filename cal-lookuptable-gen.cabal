@@ -9,11 +9,19 @@ cabal-version:       >=1.10
 
 executable cal-lookuptable-example
   main-is:             Example.hs
-  build-depends:       base >=4.7 && <4.9, cmdargs >=0.10 && <0.11, containers, cal-lookuptable-gen
+  build-depends:       base >=4.7 && <4.9
+                     , cmdargs >=0.10 && <0.11
+                     , containers
+                     , cal-lookuptable-gen
+                     , bytestring
+                     , binary
+                     , data-binary-ieee754
+                     , split
   default-language:    Haskell2010
 
 library
   exposed-modules:     CalLookupGen
-  build-depends:       base >=4.7 && <4.9, containers >=0.5 && <0.6
+  build-depends:       base >=4.7 && <4.9
+                     , containers >=0.5 && <0.6
+                     , split >= 0.2.2
   default-language:    Haskell2010
-        
